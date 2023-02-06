@@ -1,0 +1,11 @@
+<?php
+
+namespace DummyNamespace;
+
+class DummyClass extends BaseService
+{
+    public function __construct()
+    {
+        //
+    }
+}
