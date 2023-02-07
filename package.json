@@ -12,6 +12,6 @@
         "vite": "^4.0.0"
     },
     "dependencies": {
-        "bangumi-data": "^0.3.109"
+        "bangumi-data": "^0.3.110"
     }
 }
