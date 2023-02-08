@@ -9,18 +9,19 @@ use App\Models\BangumiTranslate;
 use App\Models\Site;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
-use Symfony\Component\Process\Process;
 
 class BangumiDataService extends BaseService
 {
     private string $latest_path;
     private string $backup_path;
+    private string $notify_email;
     private Site $siteModel;
     private Bangumi $bangumiModel;
     private BangumiSite $bangumiSiteModel;
     private BangumiTranslate $bangumiTranslateModel;
     public function __construct(Site $siteModel, Bangumi $bangumiModel, BangumiSite $bangumiSiteModel, BangumiTranslate $bangumiTranslateModel)
     {
+        $this->notify_email = env('NOTIFY_EMAIL');
         $this->latest_path = base_path('node_modules/bangumi-data/dist/data.json');
         $this->backup_path = resource_path('backup/data.json');
         $this->siteModel = $siteModel;
@@ -82,7 +83,7 @@ class BangumiDataService extends BaseService
                 //update failed
                 $subject = 'BangumiReview更新数据失败通知';
                 $content = '数据更新失败，npm包更新失败';
-                Mail::to('keith920627@gmail.com')->send(new UpdateDataNotify($subject, $content));
+                Mail::to($this->notify_email)->send(new UpdateDataNotify($subject, $content));
             } else {
                 $this->update_database();
             }
@@ -162,7 +163,7 @@ class BangumiDataService extends BaseService
             DB::rollBack();
             $subject = 'BangumiReview更新数据失败通知';
             $content = $e->getFile() . ' ' . $e->getLine() . ' ' . $e->getMessage();
-            Mail::to('keith920627@gmail.com')->send(new UpdateDataNotify($subject, $content));
+            Mail::to($this->notify_email)->send(new UpdateDataNotify($subject, $content));
         }
     }
 
