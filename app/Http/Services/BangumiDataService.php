@@ -36,33 +36,24 @@ class BangumiDataService extends BaseService
      * @author Lv
      * @date 2023/2/7
      */
-    public function data_init()
+    public function data_init(): void
     {
         $data = json_decode(file_get_contents($this->latest_path), true);
+        //Truncate Tables
         $this->siteModel->truncate();
         $this->bangumiModel->truncate();
         $this->bangumiSiteModel->truncate();
         $this->bangumiTranslateModel->truncate();
-        $site_data = [];
-        foreach ($data['siteMeta'] as $site => $site_info) {
-            $site_data[] = [
-                'site' => $site,
-                'title' => $site_info['title'],
-                'url' => $site_info['urlTemplate'],
-                'regions' => isset($site_info['regions']) ? json_encode($site_info['regions']) : '',
-                'type' => $site_info['type'],
-            ];
-        }
         DB::beginTransaction();
         try {
-            $this->siteModel->insert($site_data);
+            $this->siteModel->insert_site_meta($data['siteMeta']);
             $this->bangumiModel->insert_items($data['items']);
             DB::commit();
         } catch (\Exception $e) {
             DB::rollBack();
             $subject = 'BangumiReview数据初始化失败通知';
             $content = $e->getFile() . ' ' . $e->getLine() . ' ' . $e->getMessage();
-            Mail::to('keith920627@gmail.com')->send(new UpdateDataNotify($subject, $content));
+            Mail::to($this->notify_email)->send(new UpdateDataNotify($subject, $content));
         }
     }
 
@@ -72,7 +63,7 @@ class BangumiDataService extends BaseService
      * @author Lv
      * @date 2023/2/7
      */
-    public function update_data()
+    public function update_data(): void
     {
         if ($this->check_update()) {
             //backup
@@ -137,24 +128,13 @@ class BangumiDataService extends BaseService
     /**
      * Update bangumi database.
      */
-    protected function update_database()
+    protected function update_database():void
     {
         $data = json_decode(file_get_contents($this->latest_path), true);
-        //Update site data
         $this->siteModel->truncate();
-        $site_data = [];
-        foreach ($data['siteMeta'] as $site => $site_info) {
-            $site_data[] = [
-                'site' => $site,
-                'title' => $site_info['title'],
-                'url' => $site_info['urlTemplate'],
-                'regions' => isset($site_info['regions']) ? json_encode($site_info['regions']) : '',
-                'type' => $site_info['type'],
-            ];
-        }
         DB::beginTransaction();
         try {
-            $this->siteModel->insert($site_data);
+            $this->siteModel->insert_site_meta($data['siteMeta']);
             $item_data = $this->compare_data($data['items'], json_decode(file_get_contents($this->backup_path), true)['items']);
             $this->bangumiModel->insert_items($item_data['insert']);
             $this->bangumiModel->update_items($item_data['update']);
@@ -177,30 +157,21 @@ class BangumiDataService extends BaseService
      */
     public function compare_data(array $new_data,array $old_data): array
     {
-        $old_count = count($old_data);
-        $new_count = count($new_data);
-        if ($new_count > $old_count) {
-            $insert_data = array_slice($new_data, $old_count, $new_count - $old_count);
-            $update_data = array_slice($new_data, 0, $old_count);
-        } else {
-            $insert_data = [];
-            $update_data = $new_data;
-        }
-        $update_items = [];
-        if ($update_data != $old_data) {
-            foreach ($old_data as $key => $value) {
-                foreach ($update_data as $k => $v) {
-                    if ($key == $k) {
-                        if ($value != $v) {
-                            $update_items[$key] = $v;
-                        }
+        $update_list = [];
+        $insert_list = $new_data;
+        foreach ($old_data as $value) {
+            foreach ($new_data as $k => $v) {
+                if ($value['title'] == $v['title']) {
+                    unset($insert_list[$k]);
+                    if ($value != $v) {
+                        $update_list[] = $v;
                     }
                 }
             }
         }
         return [
-            'insert' => $insert_data,
-            'update' => $update_items,
+            'insert' => array_values($insert_list),
+            'update' => $update_list,
         ];
     }
 }
