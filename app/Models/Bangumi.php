@@ -99,6 +99,7 @@ class Bangumi extends Model
             $broadcast_begin = 0;
             $broadcast_frequency = '';
         }
+        $begin_search = $broadcast_begin != 0 ? $broadcast_begin : $begin;
         return [
             'title' => $value['title'],
             'type' => $value['type'],
@@ -110,7 +111,9 @@ class Bangumi extends Model
             'broadcast_begin' => $broadcast_begin,
             'broadcast_frequency' => $broadcast_frequency,
             'comment' => $value['comment'] ?? '',
-            'begin_search' => $broadcast_begin != 0 ? $broadcast_begin : $begin,
+            'begin_search' => $begin_search,
+            'search_year' => date('Y', $begin_search),
+            'search_month' => date('m', $begin_search),
         ];
     }
 
