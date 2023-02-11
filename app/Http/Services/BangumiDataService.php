@@ -7,6 +7,8 @@ use App\Models\Bangumi;
 use App\Models\BangumiSite;
 use App\Models\BangumiTranslate;
 use App\Models\Site;
+use App\Tools\GuzzleRequest;
+use GuzzleHttp\Exception\GuzzleException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 
@@ -15,6 +17,8 @@ class BangumiDataService extends BaseService
     private string $latest_path;
     private string $backup_path;
     private string $notify_email;
+    private string $bangumi_search_api = 'https://api.bgm.tv/search/subject/{keywords}?type=2';
+    private GuzzleRequest $guzzle;
     private Site $siteModel;
     private Bangumi $bangumiModel;
     private BangumiSite $bangumiSiteModel;
@@ -28,6 +32,7 @@ class BangumiDataService extends BaseService
         $this->bangumiModel = $bangumiModel;
         $this->bangumiSiteModel = $bangumiSiteModel;
         $this->bangumiTranslateModel = $bangumiTranslateModel;
+        $this->guzzle = new GuzzleRequest();
     }
 
     /**
@@ -173,5 +178,77 @@ class BangumiDataService extends BaseService
             'insert' => array_values($insert_list),
             'update' => $update_list,
         ];
+    }
+
+    /**
+     * 更新图片
+     *
+     * @param $type
+     * @param $bangumi_id
+     *
+     * @return array|void
+     *
+     * @throws GuzzleException
+     */
+    public function update_images($type = 'single', $bangumi_id = '')
+    {
+        if ($type == 'single') {
+            if ($bangumi_id == '') {
+                return $this->error('番剧id为空');
+            }
+            $this->save_image($bangumi_id);
+        } elseif ($type == 'all'){
+            $lastest_bangumi_id = $this->bangumiModel->where('image', '<>', '')->orderBy('id', 'desc')->value('id');
+            $bangumi_ids = $this->bangumiModel->where('id', '>=' , $lastest_bangumi_id)->pluck('id');
+            foreach ($bangumi_ids as $bangumi_id) {
+                $this->save_image($bangumi_id);
+            }
+        } elseif ($type == 'replenish') {
+            $bangumi_ids = $this->bangumiModel->where('image', '')->pluck('id');
+            foreach ($bangumi_ids as $bangumi_id) {
+                $this->save_image($bangumi_id, true);
+            }
+        }
+    }
+
+    /**
+     * 获取并存入图片地址
+     *
+     * @param $bangumi_id
+     * @param bool $is_replenish
+     *
+     * @throws GuzzleException
+     */
+    protected function save_image($bangumi_id, $is_replenish = false): void
+    {
+        $translate_list = $this->bangumiTranslateModel->where('type', 3)->where('bangumi_id', $bangumi_id)->get();
+        $image = '';
+        foreach ($translate_list as $value) {
+            dd($value['title']);
+            $url = str_replace('{keywords}', urlencode($value['title']), $this->bangumi_search_api);
+            $result = $this->guzzle->send_request($url);
+            dd($result);
+            if (isset($result['list']) && !empty($result['list'])) {
+                foreach ($result['list'] as $info) {
+                    if ($info['name_cn'] == $value['title']) {
+                        if (isset($info['images']['large'])) {
+                            $image = $info['images']['large'];
+                            break;
+                        }
+                    } elseif ($is_replenish) {
+                        if (isset($info['images']['large'])) {
+                            $image = $info['images']['large'];
+                            break;
+                        }
+                    }
+                }
+            }
+            if ($image != '') {
+                break;
+            }
+        }
+        if ($image != '') {
+            $this->bangumiModel->where('id', $bangumi_id)->update(['image' => $image,]);
+        }
     }
 }
