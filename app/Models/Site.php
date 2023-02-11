@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class Site extends Model
 {
     use HasFactory;
+    public $timestamps= false;
 
     /**
      * 新增站点数据

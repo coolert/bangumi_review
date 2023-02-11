@@ -10,4 +10,5 @@ class BangumiTranslate extends Model
     use HasFactory;
 
     protected $table = 'bangumi_translate';
+    public $timestamps= false;
 }

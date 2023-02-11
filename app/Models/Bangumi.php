@@ -10,6 +10,7 @@ class Bangumi extends Model
     use HasFactory;
 
     protected $table = 'bangumi';
+    public $timestamps= false;
 
     /**
      * Insert bangumi data.
