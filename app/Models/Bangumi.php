@@ -12,6 +12,16 @@ class Bangumi extends Model
     protected $table = 'bangumi';
     public $timestamps= false;
 
+    public function translate()
+    {
+        return $this->hasMany(BangumiTranslate::class, 'bangumi_id', 'id');
+    }
+
+    public function site()
+    {
+        return $this->belongsToMany(Site::class, 'bangumi_site', 'bangumi_id', 'site_id')->withPivot('site_bangumi_id','begin');
+    }
+
     /**
      * Insert bangumi data.
      *
