@@ -24,7 +24,9 @@ class BangumiController extends AdminController
             $grid->disableCreateButton();
             $grid->disableDeleteButton();
             $grid->column('id')->sortable();
-            $grid->column('image')->image();
+            $grid->column('image')->display(function () {
+                return !empty($this->image) ? $this->image : env('APP_URL') . '/storage/images/no_image.png';
+            })->image();
             $grid->column('translate', '名称')->display(function ($translate) {
                 $name_info = [];
                 foreach ($translate as $value) {
@@ -94,6 +96,18 @@ class BangumiController extends AdminController
                     '11' => '11',
                     '12' => '12',
                 ])->width(3);
+                $filter->where('是否无图片', function ($query) {
+                    if ("{$this->input}" == 1) {
+                        $query->where('image', '');
+                    }
+                })->select([1 => '是', 2 => '否',]);
+                $filter->where('是否无中文名', function ($query) {
+                    if ("{$this->input}" == 1) {
+                        $query->whereDoesntHave('translate', function ($query) {
+                            $query->where('type', 3);
+                        });
+                    }
+                })->select([1 => '是', 2 => '否']);
             });
         });
     }
