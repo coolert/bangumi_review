@@ -33,11 +33,12 @@ class Bangumi extends Model
         $bangumiTranslateModel = new BangumiTranslate();
         $bangumi_site_list = [];
         $translate_list = [];
+        $sort_sites = $this->get_sort_sites();
         foreach ($data as $value) {
             $bangumi_info = $this->organize_bangumi_info($value);
             $bangumi_id = $this->insertGetId($bangumi_info);
             if (isset($value['sites']) && !empty($value['sites'])) {
-                $bangumi_site_list = $this->organize_bangumi_site($value['sites'], $bangumi_site_list, $bangumi_id);
+                $bangumi_site_list = $this->organize_bangumi_site($value['sites'], $bangumi_site_list, $bangumi_id, $sort_sites);
             }
             if (isset($value['titleTranslate']) && !empty($value['titleTranslate'])) {
                 $translate_list = $this->organize_bangumi_translate($value['titleTranslate'], $translate_list, $bangumi_id);
@@ -66,12 +67,13 @@ class Bangumi extends Model
     {
         $bangumiSiteModel = new BangumiSite();
         $bangumiTranslateModel = new BangumiTranslate();
+        $sort_sits = $this->get_sort_sites();
         foreach ($data as $key => $value) {
             $bangumi_info = $this->organize_bangumi_info($value);
             $bangumi_id = $this->where('title', $bangumi_info['title'])->value('id');
             $this->where('id', $bangumi_id)->update($bangumi_info);
             if (isset($value['sites']) && !empty($value['sites'])) {
-                $bangumi_site_list = $this->organize_bangumi_site($value['sites'], [], $bangumi_id);
+                $bangumi_site_list = $this->organize_bangumi_site($value['sites'], [], $bangumi_id, $sort_sits);
                 if (!empty($bangumi_site_list)) {
                     $bangumiSiteModel->where('bangumi_id', $bangumi_id)->delete();
                     $chunk_site = array_chunk($bangumi_site_list, 1000);
@@ -134,14 +136,15 @@ class Bangumi extends Model
      * @param $sites
      * @param $bangumi_site_list
      * @param $bangumi_id
+     * @param $sort_sites
      *
      * @return array
      */
-    protected function organize_bangumi_site($sites, $bangumi_site_list, $bangumi_id): array
+    protected function organize_bangumi_site($sites, $bangumi_site_list, $bangumi_id, $sort_sites): array
     {
         foreach ($sites as $site_info) {
             $bangumi_site_list[] = [
-                'site' => $site_info['site'],
+                'site_id' => $sort_sites[$site_info['site']],
                 'site_bangumi_id' => $site_info['id'] ?? '',
                 'bangumi_id' => $bangumi_id,
                 'url' => $site_info['url'] ?? '',
@@ -179,5 +182,21 @@ class Bangumi extends Model
             }
         }
         return $translate_list;
+    }
+
+    /**
+     * Get sorted sites array.
+     *
+     * @return array
+     */
+    protected function get_sort_sites(): array
+    {
+        $siteModel = new Site();
+        $site_list = $siteModel->select('id', 'site')->get()->toArray();
+        $sort_sites = [];
+        foreach ($site_list as $value) {
+            $sort_sites[$value['site']] = $value['id'];
+        }
+        return $sort_sites;
     }
 }
