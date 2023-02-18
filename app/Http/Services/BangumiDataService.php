@@ -2,6 +2,7 @@
 
 namespace App\Http\Services;
 
+use App\Jobs\UpdateBangumiImages;
 use App\Mail\UpdateDataNotify;
 use App\Models\Bangumi;
 use App\Models\BangumiSite;
@@ -54,6 +55,7 @@ class BangumiDataService extends BaseService
             $this->siteModel->insert_site_meta($data['siteMeta']);
             $this->bangumiModel->insert_items($data['items']);
             DB::commit();
+            UpdateBangumiImages::dispatch('all')->onQueue('update_image');
         } catch (\Exception $e) {
             DB::rollBack();
             $subject = 'BangumiReview数据初始化失败通知';
@@ -199,9 +201,12 @@ class BangumiDataService extends BaseService
             $this->save_image($bangumi_id);
         } elseif ($type == 'all'){
             $lastest_bangumi_id = $this->bangumiModel->where('image', '<>', '')->orderBy('id', 'desc')->value('id');
-            $bangumi_ids = $this->bangumiModel->where('id', '>=' , $lastest_bangumi_id)->pluck('id');
-            foreach ($bangumi_ids as $bangumi_id) {
-                $this->save_image($bangumi_id);
+            $bangumi_ids = $this->bangumiModel->where('id', '>=', $lastest_bangumi_id)->pluck('id')->take(500);
+            if (!empty($bangumi_ids)) {
+                foreach ($bangumi_ids as $bangumi_id) {
+                    $this->save_image($bangumi_id);
+                }
+                UpdateBangumiImages::dispatch('all')->onQueue('update_image');
             }
         } elseif ($type == 'replenish') {
             $bangumi_ids = $this->bangumiModel->where('image', '')->pluck('id');
@@ -224,10 +229,8 @@ class BangumiDataService extends BaseService
         $translate_list = $this->bangumiTranslateModel->where('type', 3)->where('bangumi_id', $bangumi_id)->get();
         $image = '';
         foreach ($translate_list as $value) {
-            dd($value['title']);
             $url = str_replace('{keywords}', urlencode($value['title']), $this->bangumi_search_api);
             $result = $this->guzzle->send_request($url);
-            dd($result);
             if (isset($result['list']) && !empty($result['list'])) {
                 foreach ($result['list'] as $info) {
                     if ($info['name_cn'] == $value['title']) {
