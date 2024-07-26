@@ -150,7 +150,7 @@ class MetaDataService extends BaseService
         $guzzle = new GuzzleRequest();
         $headers = [
             'User-Agent' => 'coolert/bangumi_review',
-            'Authorization' => 'Bearer UJPaKBZq1MRYY8BJALoEdfuhfTlGcYkQ83qO2FpE',
+            'Authorization' => 'Bearer ',
         ];
         $url = 'https://api.bgm.tv/v0/subjects/' . $subject_id;
         return $guzzle->send_request($url, 'GET', [], 'FORM', $headers);
