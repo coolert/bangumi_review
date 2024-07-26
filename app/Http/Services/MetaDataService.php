@@ -4,6 +4,8 @@ namespace App\Http\Services;
 
 use App\Models\DataItem;
 use App\Models\DataSite;
+use App\Tools\GuzzleRequest;
+use GuzzleHttp\Exception\GuzzleException;
 use Illuminate\Support\Facades\File;
 
 class MetaDataService extends BaseService
@@ -12,17 +14,21 @@ class MetaDataService extends BaseService
      * @var string
      */
     protected static string $bangumi_site_path;
+    protected static string $bangumi_site_path_new;
 
     /** 番剧数据地址
      * @var string
      */
     protected static string $bangumi_data_path;
+    protected static string $bangumi_data_path_new;
 
 
     public function __construct()
     {
         self::$bangumi_site_path = storage_path('bangumi_metadata/bangumi-data/site.json');
+        self::$bangumi_site_path_new = storage_path('bangumi_metadata/bangumi-data/new_site.json');
         self::$bangumi_data_path = storage_path('bangumi_metadata/bangumi-data/bangumi.json');
+        self::$bangumi_data_path_new = storage_path('bangumi_metadata/bangumi-data/new_bangumi.json');
     }
     /** 检查更新
      * @param $package_name
@@ -48,7 +54,7 @@ class MetaDataService extends BaseService
                 //存入动漫数据
                 file_put_contents(self::$bangumi_data_path, json_encode($data['items']));
                 //存入数据库
-
+                $this->data_init();
                 return;
             }
             //检查更新
@@ -82,6 +88,19 @@ class MetaDataService extends BaseService
         }
     }
 
+    public function compare_json()
+    {
+        //比较站点数据
+        $this->shell_exec('json-diff ' . self::$bangumi_site_path . ' ' . self::$bangumi_site_path_new . ' > site_diff.txt');
+        //比较动漫数据
+        $this->shell_exec('json-diff ' . self::$bangumi_data_path . ' ' . self::$bangumi_data_path_new . ' > bangumi_diff.txt');
+    }
+
+    public function anime_update()
+    {
+        $this->shell_exec('cd ' . storage_path('bangumi_metadata/anime-offline') . ' && git clone https://github.com/manami-project/anime-offline-database.git');
+    }
+
     public function data_init(): void
     {
         $site_data = json_decode(File::get(self::$bangumi_site_path), true);
@@ -95,6 +114,46 @@ class MetaDataService extends BaseService
         $item_data = json_decode(File::get(self::$bangumi_data_path), true);
         $dataItemModel = new DataItem();
         $dataItemModel->insert($item_data);
+    }
+
+    /** 更新番剧信息
+     * @param $id
+     * @param $subject_id
+     * @throws GuzzleException
+     * @author Lv
+     * @date 2024/7/26
+     */
+    public function update_bangumi_info ($id, $subject_id)
+    {
+        $info = $this->get_subject_info($subject_id);
+        $dataItemModel = new DataItem();
+        if (empty($info['images'])) {
+            $image = '';
+        }else{
+            $image = $info['images']['common'];
+        }
+        $dataItemModel->where('_id', $id)->update([
+            'summary' => $info['summary'],
+            'image' => $image,
+        ]);
+    }
+
+    /** 从番组计划api获取番剧信息
+     * @param $subject_id
+     * @return mixed
+     * @throws GuzzleException
+     * @author Lv
+     * @date 2024/7/25
+     */
+    public function get_subject_info($subject_id)
+    {
+        $guzzle = new GuzzleRequest();
+        $headers = [
+            'User-Agent' => 'coolert/bangumi_review',
+            'Authorization' => 'Bearer UJPaKBZq1MRYY8BJALoEdfuhfTlGcYkQ83qO2FpE',
+        ];
+        $url = 'https://api.bgm.tv/v0/subjects/' . $subject_id;
+        return $guzzle->send_request($url, 'GET', [], 'FORM', $headers);
     }
 
     /** 执行命令

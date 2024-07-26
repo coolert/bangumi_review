@@ -12,6 +12,7 @@
         "vite": "^4.0.0"
     },
     "dependencies": {
-        "bangumi-data": "^0.3.110"
+        "bangumi-data": "^0.3.110",
+        "json-diff": "^1.0.6"
     }
 }

@@ -14,16 +14,19 @@ class GuzzleRequest
      * @param string $method
      * @param array $data
      * @param string $post_type
-     *
+     * @param array $headers
      * @return mixed
      *
      * @throws GuzzleException
      */
-    public function send_request(string $url,string $method = 'GET',array $data = [],string $post_type = 'FORM')
+    public function send_request(string $url,string $method = 'GET',array $data = [],string $post_type = 'FORM', array $headers = []): mixed
     {
         //use GuzzleHttp\Client;
         $client = new Client();
         $params = [];
+        if (!empty($headers)) {
+            $params['headers'] = $headers;
+        }
         if ($method == 'GET') {
             $params['query'] = $data;
         } elseif ($method == 'POST') {
@@ -33,6 +36,12 @@ class GuzzleRequest
                 $params['json'] = $data;
             }
         }
-        return json_decode($client->request($method, $url, $params)->getBody()->getContents(), true);
+        $response = $client->request($method, $url, $params);
+        $status_code = $response->getStatusCode();
+        if ($status_code == 200) {
+            return json_decode($response->getBody()->getContents(), true);
+        } else {
+            throw new \Exception($response->getBody()->getContents(), $status_code);
+        }
     }
 }
