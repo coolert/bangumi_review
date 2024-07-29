@@ -2,6 +2,7 @@
 
 namespace App\Http\Services;
 
+use App\Models\AnimeOffline;
 use App\Models\BangumiImage;
 use App\Models\Config;
 use App\Models\DataItem;
@@ -21,10 +22,13 @@ class MetaDataService extends BaseService
      */
     protected static string $bangumi_data_path;
 
+    protected static string $anime_offline_path;
+
     public function __construct()
     {
         self::$bangumi_site_path = storage_path('bangumi_metadata/bangumi-data/site.json');
         self::$bangumi_data_path = storage_path('bangumi_metadata/bangumi-data/bangumi.json');
+        self::$anime_offline_path = storage_path('bangumi_metadata/anime-offline/anime-offline-database/anime-offline-database-minified.json');
     }
     /** 检查更新
      * @param $package_name
@@ -82,6 +86,19 @@ class MetaDataService extends BaseService
                 throw new \Exception($exception->getMessage());
             }
         }
+    }
+
+    /** 初始化动漫离线数据
+     * @author Lv
+     * @date 2024/7/29
+     */
+    public function anime_offline_init()
+    {
+        $json_data = File::get(self::$anime_offline_path);
+        $data = json_decode($json_data, true)['data'];
+        $animeOfflineModel = new AnimeOffline();
+        $animeOfflineModel->truncate();
+        $animeOfflineModel->insert($data);
     }
 
     /** 初始化表数据
