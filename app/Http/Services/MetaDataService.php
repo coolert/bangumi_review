@@ -2,6 +2,7 @@
 
 namespace App\Http\Services;
 
+use App\Models\Config;
 use App\Models\DataItem;
 use App\Models\DataSite;
 use App\Tools\GuzzleRequest;
@@ -22,6 +23,8 @@ class MetaDataService extends BaseService
     protected static string $bangumi_data_path;
     protected static string $bangumi_data_path_new;
 
+    protected static string $bangumi_data_dir_path;
+
 
     public function __construct()
     {
@@ -29,6 +32,7 @@ class MetaDataService extends BaseService
         self::$bangumi_site_path_new = storage_path('bangumi_metadata/bangumi-data/new_site.json');
         self::$bangumi_data_path = storage_path('bangumi_metadata/bangumi-data/bangumi.json');
         self::$bangumi_data_path_new = storage_path('bangumi_metadata/bangumi-data/new_bangumi.json');
+        self::$bangumi_data_dir_path = storage_path('bangumi_metadata/bangumi-data/');
     }
     /** 检查更新
      * @param $package_name
@@ -91,9 +95,9 @@ class MetaDataService extends BaseService
     public function compare_json()
     {
         //比较站点数据
-        $this->shell_exec('json-diff ' . self::$bangumi_site_path . ' ' . self::$bangumi_site_path_new . ' > site_diff.txt');
+        $this->shell_exec('json-diff ' . self::$bangumi_site_path . ' ' . self::$bangumi_site_path_new . ' > ' . self::$bangumi_data_dir_path . 'site_diff.txt');
         //比较动漫数据
-        $this->shell_exec('json-diff ' . self::$bangumi_data_path . ' ' . self::$bangumi_data_path_new . ' > bangumi_diff.txt');
+        $this->shell_exec('json-diff ' . self::$bangumi_data_path . ' ' . self::$bangumi_data_path_new . ' > ' . self::$bangumi_data_dir_path . 'bangumi_diff.txt');
     }
 
     public function anime_update()
@@ -147,11 +151,9 @@ class MetaDataService extends BaseService
      */
     public function get_subject_info($subject_id)
     {
+        $configModel = new Config();
         $guzzle = new GuzzleRequest();
-        $headers = [
-            'User-Agent' => 'coolert/bangumi_review',
-            'Authorization' => 'Bearer ',
-        ];
+        $headers = json_decode($configModel->where('title', 'bangumi_api')->value('content'), true);
         $url = 'https://api.bgm.tv/v0/subjects/' . $subject_id;
         return $guzzle->send_request($url, 'GET', [], 'FORM', $headers);
     }
