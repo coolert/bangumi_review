@@ -9,8 +9,15 @@ class TorrentService extends BaseService
         'anima_flower' => 'https://dmhy.b168.net/topics/rss/rss.xml?keyword={keywords}',
         //萌番组
         'anima_group' => 'https://bangumi.moe/rss/search/{keywords}',
-        //蜜柑
-        'mikan' => 'https://mikanani.me/RSS/Search?searchstr={keywords}',
+    ];
+    /**
+     * 蜜柑计划URL
+     */
+    public const MIKAN_URL = [
+        //搜索地址
+        'search_url' => 'https://mikanani.me/Home/Search?searchstr={keywords}',
+        //RSS地址
+        'rss_url' => 'https://mikanani.me/RSS/Search?',
     ];
     public function __construct()
     {
@@ -32,13 +39,13 @@ class TorrentService extends BaseService
     }
 
     /**
-     * 解析RSS订阅
+     * 解析蜜柑RSS订阅
      *
      * @param string $rss_subscribe_url
      *
      * @return array
      */
-    public function analysis_rss(string $rss_subscribe_url): array
+    public function analysis_mikan_rss(string $rss_subscribe_url): array
     {
         $text = '';
         $fp = fopen($rss_subscribe_url, 'r') or die('无法打开该网站 Feed');
@@ -74,5 +81,76 @@ class TorrentService extends BaseService
             }
         }
         return $list;
+    }
+
+    /** 根据关键词搜索蜜柑计划字幕组列表与番剧列表
+     * @param $keywords
+     * @return array[]
+     * @author Lv
+     * @date 2024/7/31
+     */
+    public function mikan_search($keywords)
+    {
+        $url = str_replace('{keywords}', urlencode($keywords), self::MIKAN_URL['search_url']);
+        $content = file_get_contents($url);
+        $doc = new \DOMDocument();
+        @$doc->loadHTML($content);
+        $xpath = new \DOMXPath($doc);
+        //字幕组信息
+        $groupElements = $xpath->query('//ul[contains(@class, "list-unstyled")]');
+        $bangumiElements = $xpath->query('//ul[contains(@class, "list-inline an-ul")]');
+        $subtitle_group = [];
+        foreach ($groupElements[0]->getElementsByTagName('li') as $key => $li) {
+            if ($key == 0) {
+                continue;
+            }
+            $aElements = $li->getElementsByTagName('a')[0];
+            $subtitle_group[] = [
+                'title' => $aElements->nodeValue,
+                'group_id' => $aElements->getAttribute('data-subgroupid'),
+            ];
+        }
+        $bangumi_list = [];
+        foreach ($bangumiElements[0]->getElementsByTagName('li') as $k => $v) {
+            $bangumi_list[] = [
+                'title' => $xpath->query('.//div[contains(@class, "an-text")]', $v)[0]->nodeValue,
+                'bangumi_id' => ltrim($v->getElementsByTagName('a')[0]->getAttribute('href'), '/Home/Bangumi/') ,
+            ];
+        }
+        return ['group_list' => $subtitle_group, 'bangumi_list' => $bangumi_list];
+    }
+
+    /** 搜索蜜柑计划RSS数据
+     * @param string $keywords
+     * @param string $bangumi_id
+     * @param string $group_id
+     * @return array
+     * @author Lv
+     * @date 2024/7/31
+     */
+    public function mikan_rss_search(string $keywords = '', string $bangumi_id = '', string $group_id = ''): array
+    {
+        $param_str = '';
+        if (!empty($keywords)) {
+            $param_str .= 'searchstr=' . urlencode($keywords);
+        }
+        if (!empty($bangumi_id)) {
+            if (str_ends_with($param_str, '?')) {
+                $param_str .= 'bangumiId=' . $bangumi_id;
+            }else{
+                $param_str .= '&bangumiId=' . $bangumi_id;
+
+            }
+        }
+        if (!empty($group_id)) {
+            if (str_ends_with($param_str, '?')) {
+                $param_str .= 'subgroupid=' . $group_id;
+            }else{
+                $param_str .= '&subgroupid=' . $group_id;
+
+            }
+        }
+        $url = self::MIKAN_URL['rss_url'] . $param_str;
+        return $this->analysis_mikan_rss($url);
     }
 }
