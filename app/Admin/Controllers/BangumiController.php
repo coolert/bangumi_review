@@ -4,6 +4,9 @@ namespace App\Admin\Controllers;
 
 use App\Admin\Repositories\Bangumi;
 use App\Models\BangumiTranslate;
+use App\Models\DataItem;
+use App\Models\DataSite;
+use Carbon\Carbon;
 use Dcat\Admin\Form;
 use Dcat\Admin\Grid;
 use Dcat\Admin\Show;
@@ -19,95 +22,45 @@ class BangumiController extends AdminController
     protected function grid()
     {
         return Grid::make(new Bangumi(), function (Grid $grid) {
-            $grid->model()->with('translate');
             $grid->disableRowSelector();
             $grid->disableCreateButton();
             $grid->disableDeleteButton();
-            $grid->column('id')->sortable();
+            $grid->column('title', '名称')->display(function () {
+                return array_key_exists('zh-Hans', $this->titleTranslate) ? $this->titleTranslate['zh-Hans'][0] : $this->title;
+            })->width(200);
             $grid->column('image')->display(function () {
                 return !empty($this->image) ? $this->image : env('APP_URL') . '/storage/images/no_image.png';
-            })->image();
-            $grid->column('translate', '名称')->display(function ($translate) {
-                $name_info = [];
-                foreach ($translate as $value) {
-                    if ($value['type'] == 2 && empty($name_info)) {
-                        $name_info = [
-                            'type' => $value['type'],
-                            'name' => $value['title'],
-                        ];
-                    } elseif ($value['type'] == 4 && (empty($name_info) || $name_info['type'] == 2)) {
-                        $name_info = [
-                            'type' => $value['type'],
-                            'name' => $value['title'],
-                        ];
-                    } elseif ($value['type'] == 3) {
-                        $name_info = [
-                            'type' => $value['type'],
-                            'name' => $value['title'],
-                        ];
-                    }
-                }
-                return empty($name_info) ? '无' : $name_info['name'];
-            });
-            $grid->column('title');
-            $grid->column('type');
-            $grid->column('lang')->display(function ($lang) {
-                switch ($lang) {
-                    case 'ja':
-                        $language = '日语';
-                        break;
-                    case 'en':
-                        $language = '英语';
-                        break;
-                    case 'zh-Hans':
-                        $language = '简体中文';
-                        break;
-                    case 'zh-Hant':
-                        $language = '繁体中文';
-                        break;
-                }
-                return $language;
-            });
-            $grid->column('begin_search', '上映时间')->display(function ($begin_search) {
-                return date('Y-m-d', $begin_search);
+            })->image()->width(300);
+            $grid->column('type', '类型')->width(200);
+            $grid->column('begin', '上映时间')->display(function () {
+                return $this->begin->toDateTime()->format('Y-m-d');
+            })->sortable();
+            $grid->column('end', '完结时间')->display(function () {
+                return empty($this->end) ? '' : $this->end->toDateTime()->format('Y-m-d');
             });
             $grid->filter(function (Grid\Filter $filter) {
                 $filter->panel();
                 $filter->where('番剧名称', function ($query) {
-                    $query->where('title', 'like', "%{$this->input}%")
-                        ->orWhere(function ($query){
-                            $query->whereHas('translate', function ($query) {
-                                $query->where('title', 'like', "%{$this->input}%");
-                            });
-                        });
+                    $query->where('titleTranslate.zh-Hans', 'like', "%{$this->input}%");
                 })->width(3);
-                $filter->equal('search_year', '年份')->select('api/search_year')->width(3);
-                $filter->equal('search_month','月份')->select([
-                    '01' => '01',
-                    '02' => '02',
-                    '03' => '03',
-                    '04' => '04',
-                    '05' => '05',
-                    '06' => '06',
-                    '07' => '07',
-                    '08' => '08',
-                    '09' => '09',
-                    '10' => '10',
-                    '11' => '11',
-                    '12' => '12',
-                ])->width(3);
-                $filter->where('是否无图片', function ($query) {
-                    if ("{$this->input}" == 1) {
-                        $query->where('image', '');
-                    }
-                })->select([1 => '是', 2 => '否',]);
-                $filter->where('是否无中文名', function ($query) {
-                    if ("{$this->input}" == 1) {
-                        $query->whereDoesntHave('translate', function ($query) {
-                            $query->where('type', 3);
-                        });
-                    }
-                })->select([1 => '是', 2 => '否']);
+                $filter->where('年份', function ($query) {
+                    $query->whereRaw([
+                        '$expr' => [
+                            '$eq' => [
+                                ['$year' => '$begin'], intval($this->input)
+                            ]
+                        ]
+                    ]);
+                })->integer()->width(3);
+                $filter->where('月', function ($query) {
+                    $query->whereRaw([
+                        '$expr' => [
+                            '$eq' => [
+                                ['$month' => '$begin'], intval($this->input)
+                            ]
+                        ]
+                    ]);
+                })->integer()->width(3);
             });
         });
     }
@@ -126,41 +79,73 @@ class BangumiController extends AdminController
                 ->tools(function ($tools) {
                     $tools->disableDelete();
                 });
-            $show->field('id');
+            $show->field('_id', 'ID');
             $show->field('image', '封面')->image();
-            $show->field('title');
-            $show->field('简中')->as(function () {
-                $name_list = BangumiTranslate::where('bangumi_id', $this->id)->where('type',3)->pluck('title');
-                return !empty($name_list) ? implode('、', $name_list->toArray()) : '';
-            });
-            $show->field('繁中')->as(function () {
-                $name_list = BangumiTranslate::where('bangumi_id', $this->id)->where('type',4)->pluck('title');
-                return !empty($name_list) ? implode('、', $name_list->toArray()) : '';
-            });
-            $show->field('英文')->as(function () {
-                $name_list = BangumiTranslate::where('bangumi_id', $this->id)->where('type',2)->pluck('title');
-                return !empty($name_list) ? implode('、', $name_list->toArray()) : '';
-            });
-            $show->field('日文')->as(function () {
-                $name_list = BangumiTranslate::where('bangumi_id', $this->id)->where('type',1)->pluck('title');
-                return !empty($name_list) ? implode('、', $name_list->toArray()) : '';
-            });
-            $show->field('type');
-            $show->field('lang');
-            $show->field('official_site');
-            $show->field('comment');
-            $show->field('begin_search', '上映时间')->as(function ($time) {
-                return date('Y-m-d', $time);
-            });
-            $bangumiModel = new \App\Models\Bangumi();
-            $site_info = $bangumiModel->where('id', $id)->with('site')->first();
-            if (!empty($site_info['site'])) {
-                foreach ($site_info['site'] as $value) {
-                    $show->field($value['title'])->as(function () use ($value){
-                        return str_replace('{{id}}', $value['pivot']['site_bangumi_id'], $value['url']);
-                    })->link();
+            $show->field('title', '原始名称');
+            $show->titleTranslate('番剧名称')->as(function ($item) {
+                if (isset($item['zh-Hans'])) {
+                    $str = '';
+                    foreach ($item['zh-Hans'] as $value) {
+                        $str .= $value . '、';
+                    }
+                    $str = rtrim($str, '、');
+                } else {
+                    $str = $this->title;
                 }
+                return $str;
+            });
+            $show->field('summary', '简介');
+            $show->field('type', '类型');
+            $show->field('lang', '语言');
+            $show->field('officialSite', '官方网站')->link();
+            $show->begin('上映时间')->as(function ($begin) {
+                return $begin->toDateTime()->format('Y-m-d');
+            });
+            $show->end('完结时间')->as(function ($end) {
+                return empty($end) ? '' : $end->toDateTime()->format('Y-m-d');
+            });
+            $sites = DataItem::where('_id', $id)->value('sites');
+            foreach ($sites as $site) {
+                $site_info = DataSite::where('name', $site['site'])->first()->toArray();
+                $url = str_replace('{{id}}', $site['id'], $site_info['urlTemplate']);
+                $show->field($site['site'], $site_info['title'])->as(function () use ($url) {
+                    return $url;
+                })->link();
             }
+//            $show->field('image', '封面')->image();
+//            $show->field('title');
+//            $show->field('简中')->as(function () {
+//                $name_list = BangumiTranslate::where('bangumi_id', $this->id)->where('type',3)->pluck('title');
+//                return !empty($name_list) ? implode('、', $name_list->toArray()) : '';
+//            });
+//            $show->field('繁中')->as(function () {
+//                $name_list = BangumiTranslate::where('bangumi_id', $this->id)->where('type',4)->pluck('title');
+//                return !empty($name_list) ? implode('、', $name_list->toArray()) : '';
+//            });
+//            $show->field('英文')->as(function () {
+//                $name_list = BangumiTranslate::where('bangumi_id', $this->id)->where('type',2)->pluck('title');
+//                return !empty($name_list) ? implode('、', $name_list->toArray()) : '';
+//            });
+//            $show->field('日文')->as(function () {
+//                $name_list = BangumiTranslate::where('bangumi_id', $this->id)->where('type',1)->pluck('title');
+//                return !empty($name_list) ? implode('、', $name_list->toArray()) : '';
+//            });
+//            $show->field('type');
+//            $show->field('lang');
+//            $show->field('official_site');
+//            $show->field('comment');
+//            $show->field('begin_search', '上映时间')->as(function ($time) {
+//                return date('Y-m-d', $time);
+//            });
+//            $bangumiModel = new \App\Models\Bangumi();
+//            $site_info = $bangumiModel->where('id', $id)->with('site')->first();
+//            if (!empty($site_info['site'])) {
+//                foreach ($site_info['site'] as $value) {
+//                    $show->field($value['title'])->as(function () use ($value){
+//                        return str_replace('{{id}}', $value['pivot']['site_bangumi_id'], $value['url']);
+//                    })->link();
+//                }
+//            }
         });
     }
 
@@ -175,8 +160,21 @@ class BangumiController extends AdminController
             $form->tools(function (Form\Tools $tools) {
                 $tools->disableDelete();
             });
-            $form->display('id');
-            $form->text('image');
+            $form->display('_id', 'ID');
+            $form->display('title', '标题');
+            $form->display('titleTranslate','番剧名称')->with(function ($item) {
+                if (isset($item['zh-Hans'])) {
+                    $str = '';
+                    foreach ($item['zh-Hans'] as $value) {
+                        $str .= $value . '、';
+                    }
+                    $str = rtrim($str, '、');
+                } else {
+                    $str = $this->title;
+                }
+                return $str;
+            });
+            $form->text('image', '封面');
         });
     }
 

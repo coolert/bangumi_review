@@ -10,6 +10,7 @@ use App\Models\DataSite;
 use App\Tools\GuzzleRequest;
 use GuzzleHttp\Exception\GuzzleException;
 use Illuminate\Support\Facades\File;
+use MongoDB\BSON\UTCDateTime;
 
 class MetaDataService extends BaseService
 {
@@ -121,7 +122,31 @@ class MetaDataService extends BaseService
         $dataItemModel = new DataItem();
         //清空动漫数据
         $dataItemModel->truncate();
+        foreach ($item_data as &$value) {
+            $value['begin'] = $this->trans_date($value['begin']);
+            if (!empty($value['end'])) {
+                $value['end'] = $this->trans_date($value['end']);
+            }
+        }
         $dataItemModel->insert($item_data);
+    }
+
+    /** 将SO 8601 日期字符串转换为 UTCDateTime 对象
+     * @param $dateString
+     * @return UTCDateTime
+     * @throws \Exception
+     * @author Lv
+     * @date 2024/7/30
+     */
+    public function trans_date($dateString)
+    {
+        // ISO 8601 日期字符串
+        // 创建 DateTime 对象并设置为 UTC 时区
+        $dateTime = new \DateTime($dateString, new \DateTimeZone('UTC'));
+        // 获取 Unix 时间戳并转换为毫秒
+        $timestamp = $dateTime->getTimestamp() * 1000;
+        // 创建 UTCDateTime 对象
+        return new UTCDateTime($timestamp);
     }
 
     /** 更新番剧信息
