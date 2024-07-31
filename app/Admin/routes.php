@@ -14,6 +14,9 @@ Route::group([
 ], function (Router $router) {
 
     $router->get('/', 'HomeController@index');
+    //番剧管理
     $router->resource('bangumi', 'BangumiController');
+    //番剧数据库
+    $router->resource('anime_offline', 'AnimeOfflineController');
     $router->get('api/search_year', [BangumiController::class,'search_year']);
 });

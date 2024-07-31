@@ -11,6 +11,9 @@ namespace Dcat\Admin {
     use Illuminate\Support\Collection;
 
     /**
+     * @property Grid\Column|Collection titleTranslate
+     * @property Grid\Column|Collection begin
+     * @property Grid\Column|Collection end
      * @property Grid\Column|Collection id
      * @property Grid\Column|Collection name
      * @property Grid\Column|Collection type
@@ -38,8 +41,6 @@ namespace Dcat\Admin {
      * @property Grid\Column|Collection remember_token
      * @property Grid\Column|Collection lang
      * @property Grid\Column|Collection official_site
-     * @property Grid\Column|Collection begin
-     * @property Grid\Column|Collection end
      * @property Grid\Column|Collection broadcast
      * @property Grid\Column|Collection broadcast_begin
      * @property Grid\Column|Collection broadcast_frequency
@@ -52,6 +53,11 @@ namespace Dcat\Admin {
      * @property Grid\Column|Collection site_bangumi_id
      * @property Grid\Column|Collection bangumi_id
      * @property Grid\Column|Collection url
+     * @property Grid\Column|Collection subtitle_group
+     * @property Grid\Column|Collection url_type
+     * @property Grid\Column|Collection source
+     * @property Grid\Column|Collection status
+     * @property Grid\Column|Collection content
      * @property Grid\Column|Collection uuid
      * @property Grid\Column|Collection connection
      * @property Grid\Column|Collection queue
@@ -68,6 +74,9 @@ namespace Dcat\Admin {
      * @property Grid\Column|Collection regions
      * @property Grid\Column|Collection email_verified_at
      *
+     * @method Grid\Column|Collection titleTranslate(string $label = null)
+     * @method Grid\Column|Collection begin(string $label = null)
+     * @method Grid\Column|Collection end(string $label = null)
      * @method Grid\Column|Collection id(string $label = null)
      * @method Grid\Column|Collection name(string $label = null)
      * @method Grid\Column|Collection type(string $label = null)
@@ -95,8 +104,6 @@ namespace Dcat\Admin {
      * @method Grid\Column|Collection remember_token(string $label = null)
      * @method Grid\Column|Collection lang(string $label = null)
      * @method Grid\Column|Collection official_site(string $label = null)
-     * @method Grid\Column|Collection begin(string $label = null)
-     * @method Grid\Column|Collection end(string $label = null)
      * @method Grid\Column|Collection broadcast(string $label = null)
      * @method Grid\Column|Collection broadcast_begin(string $label = null)
      * @method Grid\Column|Collection broadcast_frequency(string $label = null)
@@ -109,6 +116,11 @@ namespace Dcat\Admin {
      * @method Grid\Column|Collection site_bangumi_id(string $label = null)
      * @method Grid\Column|Collection bangumi_id(string $label = null)
      * @method Grid\Column|Collection url(string $label = null)
+     * @method Grid\Column|Collection subtitle_group(string $label = null)
+     * @method Grid\Column|Collection url_type(string $label = null)
+     * @method Grid\Column|Collection source(string $label = null)
+     * @method Grid\Column|Collection status(string $label = null)
+     * @method Grid\Column|Collection content(string $label = null)
      * @method Grid\Column|Collection uuid(string $label = null)
      * @method Grid\Column|Collection connection(string $label = null)
      * @method Grid\Column|Collection queue(string $label = null)
@@ -130,6 +142,9 @@ namespace Dcat\Admin {
     class MiniGrid extends Grid {}
 
     /**
+     * @property Show\Field|Collection titleTranslate
+     * @property Show\Field|Collection begin
+     * @property Show\Field|Collection end
      * @property Show\Field|Collection id
      * @property Show\Field|Collection name
      * @property Show\Field|Collection type
@@ -157,8 +172,6 @@ namespace Dcat\Admin {
      * @property Show\Field|Collection remember_token
      * @property Show\Field|Collection lang
      * @property Show\Field|Collection official_site
-     * @property Show\Field|Collection begin
-     * @property Show\Field|Collection end
      * @property Show\Field|Collection broadcast
      * @property Show\Field|Collection broadcast_begin
      * @property Show\Field|Collection broadcast_frequency
@@ -171,6 +184,11 @@ namespace Dcat\Admin {
      * @property Show\Field|Collection site_bangumi_id
      * @property Show\Field|Collection bangumi_id
      * @property Show\Field|Collection url
+     * @property Show\Field|Collection subtitle_group
+     * @property Show\Field|Collection url_type
+     * @property Show\Field|Collection source
+     * @property Show\Field|Collection status
+     * @property Show\Field|Collection content
      * @property Show\Field|Collection uuid
      * @property Show\Field|Collection connection
      * @property Show\Field|Collection queue
@@ -187,6 +205,9 @@ namespace Dcat\Admin {
      * @property Show\Field|Collection regions
      * @property Show\Field|Collection email_verified_at
      *
+     * @method Show\Field|Collection titleTranslate(string $label = null)
+     * @method Show\Field|Collection begin(string $label = null)
+     * @method Show\Field|Collection end(string $label = null)
      * @method Show\Field|Collection id(string $label = null)
      * @method Show\Field|Collection name(string $label = null)
      * @method Show\Field|Collection type(string $label = null)
@@ -214,8 +235,6 @@ namespace Dcat\Admin {
      * @method Show\Field|Collection remember_token(string $label = null)
      * @method Show\Field|Collection lang(string $label = null)
      * @method Show\Field|Collection official_site(string $label = null)
-     * @method Show\Field|Collection begin(string $label = null)
-     * @method Show\Field|Collection end(string $label = null)
      * @method Show\Field|Collection broadcast(string $label = null)
      * @method Show\Field|Collection broadcast_begin(string $label = null)
      * @method Show\Field|Collection broadcast_frequency(string $label = null)
@@ -228,6 +247,11 @@ namespace Dcat\Admin {
      * @method Show\Field|Collection site_bangumi_id(string $label = null)
      * @method Show\Field|Collection bangumi_id(string $label = null)
      * @method Show\Field|Collection url(string $label = null)
+     * @method Show\Field|Collection subtitle_group(string $label = null)
+     * @method Show\Field|Collection url_type(string $label = null)
+     * @method Show\Field|Collection source(string $label = null)
+     * @method Show\Field|Collection status(string $label = null)
+     * @method Show\Field|Collection content(string $label = null)
      * @method Show\Field|Collection uuid(string $label = null)
      * @method Show\Field|Collection connection(string $label = null)
      * @method Show\Field|Collection queue(string $label = null)

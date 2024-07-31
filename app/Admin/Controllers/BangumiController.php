@@ -112,40 +112,6 @@ class BangumiController extends AdminController
                     return $url;
                 })->link();
             }
-//            $show->field('image', '封面')->image();
-//            $show->field('title');
-//            $show->field('简中')->as(function () {
-//                $name_list = BangumiTranslate::where('bangumi_id', $this->id)->where('type',3)->pluck('title');
-//                return !empty($name_list) ? implode('、', $name_list->toArray()) : '';
-//            });
-//            $show->field('繁中')->as(function () {
-//                $name_list = BangumiTranslate::where('bangumi_id', $this->id)->where('type',4)->pluck('title');
-//                return !empty($name_list) ? implode('、', $name_list->toArray()) : '';
-//            });
-//            $show->field('英文')->as(function () {
-//                $name_list = BangumiTranslate::where('bangumi_id', $this->id)->where('type',2)->pluck('title');
-//                return !empty($name_list) ? implode('、', $name_list->toArray()) : '';
-//            });
-//            $show->field('日文')->as(function () {
-//                $name_list = BangumiTranslate::where('bangumi_id', $this->id)->where('type',1)->pluck('title');
-//                return !empty($name_list) ? implode('、', $name_list->toArray()) : '';
-//            });
-//            $show->field('type');
-//            $show->field('lang');
-//            $show->field('official_site');
-//            $show->field('comment');
-//            $show->field('begin_search', '上映时间')->as(function ($time) {
-//                return date('Y-m-d', $time);
-//            });
-//            $bangumiModel = new \App\Models\Bangumi();
-//            $site_info = $bangumiModel->where('id', $id)->with('site')->first();
-//            if (!empty($site_info['site'])) {
-//                foreach ($site_info['site'] as $value) {
-//                    $show->field($value['title'])->as(function () use ($value){
-//                        return str_replace('{{id}}', $value['pivot']['site_bangumi_id'], $value['url']);
-//                    })->link();
-//                }
-//            }
         });
     }
 
