@@ -2,6 +2,10 @@
 
 namespace App\Http\Services;
 
+use App\Tools\GuzzleRequest;
+use GuzzleHttp\Client;
+use GuzzleHttp\Exception\RequestException;
+
 class TorrentService extends BaseService
 {
     public const RSS_URLS = [
@@ -19,23 +23,23 @@ class TorrentService extends BaseService
         //RSS地址
         'rss_url' => 'https://mikanani.me/RSS/Search?',
     ];
+
+    /**
+     * 萌番组URL
+     */
+    public const MOE_URL = [
+        //标签搜索
+        'tag_url' => 'https://bangumi.moe/api/tag/search',
+        //字幕组
+        'group_url' => 'https://bangumi.moe/api/tag/team',
+        //常用标签
+        'common_tag_url' => 'https://bangumi.moe/api/tag/common',
+        //RSS地址
+        'rss_url' => 'https://bangumi.moe/rss/tags/',
+    ];
     public function __construct()
     {
         //
-    }
-
-    /**
-     * 获取下载信息列表
-     *
-     * @param $key_words
-     * @param $url
-     *
-     * @return array
-     */
-    public function get_torrent_list($key_words, $url)
-    {
-        $path = str_replace('{keywords}', urlencode($key_words), $url);
-        return $this->analysis_rss($path);
     }
 
     /**
@@ -152,5 +156,98 @@ class TorrentService extends BaseService
         }
         $url = self::MIKAN_URL['rss_url'] . $param_str;
         return $this->analysis_mikan_rss($url);
+    }
+
+    /** moe标签搜索
+     * @param $search
+     * @return array
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     * @author Lv
+     * @date 2024/8/1
+     */
+    public function moe_tag_search($search): array
+    {
+        $guzzle = new GuzzleRequest();
+        $request_data = [
+            'keywords' => true,
+            'multi' => true,
+            'name' => $search
+        ];
+        $re = $guzzle->send_request(self::MOE_URL['tag_url'], 'POST', $request_data, 'JSON');
+        $data = [];
+        if ($re['success'] && $re['found']) {
+            foreach ($re['tag'] as $v) {
+                $data[] = [
+                    'id' => $v['_id'],
+                    'title' => $v['locale']['zh_cn']
+                ];
+            }
+        }
+        return $data;
+    }
+
+    /** moe通用标签/字幕组标签
+     * @param $type
+     * @return array
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     * @author Lv
+     * @date 2024/8/1
+     */
+    public function moe_common_tag($type = 'common'): array
+    {
+        $url = $type == 'common' ? self::MOE_URL['common_tag_url'] : self::MOE_URL['group_url'];
+        $guzzle = new GuzzleRequest();
+        $re = $guzzle->send_request($url);
+        $data = [];
+        foreach ($re as $v) {
+            $data[] = [
+                'id' => $v['_id'],
+                'title' => $v['name']
+            ];
+        }
+        return $data;
+    }
+
+    /** moeRSS搜索
+     * @param array $tag_ids
+     * @return array
+     * @throws \Exception
+     * @author Lv
+     * @date 2024/8/1
+     */
+    public function moe_rss_search(array $tag_ids): array
+    {
+        if (empty($tag_ids)) {
+            throw new \Exception('标签不能为空');
+        }
+        $url = self::MOE_URL['rss_url'];
+        foreach ($tag_ids as $tag_id) {
+            $url .= $tag_id . '+';
+        }
+        $url = rtrim($url, '+');
+        return $this->analysis_mikan_rss($url);
+    }
+
+    /** 下载种子文件
+     * @param $url
+     * @return string
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     * @author Lv
+     * @date 2024/8/1
+     */
+    public function download_torrent($url): string
+    {
+        $client = new Client();
+        try {
+            $savePath = storage_path('torrent/'. uniqid() . '.torrent');
+            $response = $client->get($url, ['sink' => $savePath]);
+            $re_path = '';
+            if ($response->getStatusCode() == 200) {
+                $re_path = $savePath;
+            }
+        } catch (RequestException $e) {
+            throw new \Exception("Request failed: " . $e->getMessage());
+        }
+        return $re_path;
     }
 }
