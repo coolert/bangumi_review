@@ -8,11 +8,27 @@ use GuzzleHttp\Exception\RequestException;
 
 class VideoSourceService extends BaseService
 {
-    public const RSS_URLS = [
-        //动漫花园
-        'anima_flower' => 'https://dmhy.b168.net/topics/rss/rss.xml?keyword={keywords}',
-        //萌番组
-        'anima_group' => 'https://bangumi.moe/rss/search/{keywords}',
+    public const SITE_INFO = [
+        'mikan' => [
+            'url_type' => 'torrent',
+            'source_type' => ['bangumi']
+        ],
+        'moe' => [
+            'url_type' => 'torrent',
+            'source_type' => ['bangumi']
+        ],
+        'dmhy' => [
+            'url_type' => 'magnet',
+            'source_type' => ['bangumi', 'comic', 'music', 'jp_drama', 'game', 'tokusatsu']
+        ],
+        'nyaa' => [
+            'url_type' => 'torrent',
+            'source_type' => ['bangumi']
+        ],
+        'acgnx' => [
+            'url_type' => 'magnet',
+            'source_type' => ['bangumi', 'comic', 'music', 'jp_drama', 'game', 'tokusatsu']
+        ]
     ];
     /**
      * 蜜柑计划URL
@@ -37,19 +53,36 @@ class VideoSourceService extends BaseService
         //RSS地址
         'rss_url' => 'https://bangumi.moe/rss/tags/',
     ];
-    public function __construct()
-    {
-        //
-    }
+
+    /**
+     * 动漫花园URL
+     */
+    public const DMHY_URL = [
+        'rss_url' => 'https://share.dmhy.org/topics/rss/rss.xml?keyword={keywords}',
+    ];
+
+    /**
+     * Nyaa URL
+     */
+    public const NYAA_URL = [
+        'rss_url' => 'https://nyaa.si/?page=rss&q={keywords}',
+    ];
+
+    /**
+     * 末日动漫URL
+     */
+    public const ACGNX_URL = [
+        'rss_url' => 'https://share.acgnx.se/rss.xml?keyword={keywords}',
+    ];
 
     /**
      * 解析蜜柑RSS订阅
      *
      * @param string $rss_subscribe_url
-     *
+     * @param string $url_label
      * @return array
      */
-    public function analysis_mikan_rss(string $rss_subscribe_url): array
+    public function analysis_mikan_rss(string $rss_subscribe_url, string $url_label = 'ENCLOSURE'): array
     {
         $text = '';
         $fp = fopen($rss_subscribe_url, 'r') or die('无法打开该网站 Feed');
@@ -79,8 +112,14 @@ class VideoSourceService extends BaseService
                 if ($tag == "TITLE") {
                     $list[$item_key]['title'] = $v["value"];
                 }
-                if ($tag == "ENCLOSURE") {
-                    $list[$item_key]['url'] = $v['attributes']['URL'];
+                if ($url_label == 'ENCLOSURE') {
+                    if ($tag == "ENCLOSURE") {
+                        $list[$item_key]['url'] = $v['attributes']['URL'];
+                    }
+                } else {
+                    if ($tag == "LINK") {
+                        $list[$item_key]['url'] = $v["value"];
+                    }
                 }
             }
         }
@@ -225,6 +264,54 @@ class VideoSourceService extends BaseService
             $url .= $tag_id . '+';
         }
         $url = rtrim($url, '+');
+        return $this->analysis_mikan_rss($url);
+    }
+
+    /** dmhyRSS搜索
+     * @param $keywords
+     * @return array
+     * @throws \Exception
+     * @author Lv
+     * @date 2024/8/2
+     */
+    public function dmhy_rss_search($keywords)
+    {
+        if (empty($keywords)) {
+            throw new \Exception('关键字不能为空');
+        }
+        $url = str_replace('{keywords}', urlencode($keywords), self::DMHY_URL['rss_url']);
+        return $this->analysis_mikan_rss($url);
+    }
+
+    /** nyaaRSS搜索
+     * @param $keywords
+     * @return array
+     * @throws \Exception
+     * @author Lv
+     * @date 2024/8/2
+     */
+    public function nyaa_rss_search($keywords)
+    {
+        if (empty($keywords)) {
+            throw new \Exception('关键字不能为空');
+        }
+        $url = str_replace('{keywords}', urlencode($keywords), self::NYAA_URL['rss_url']);
+        return $this->analysis_mikan_rss($url,'LINK');
+    }
+
+    /** acgnxRSS搜索
+     * @param $keywords
+     * @return array
+     * @throws \Exception
+     * @author Lv
+     * @date 2024/8/2
+     */
+    public function acgnx_rss_search($keywords)
+    {
+        if (empty($keywords)) {
+            throw new \Exception('关键字不能为空');
+        }
+        $url = str_replace('{keywords}', urlencode($keywords), self::ACGNX_URL['rss_url']);
         return $this->analysis_mikan_rss($url);
     }
 }
