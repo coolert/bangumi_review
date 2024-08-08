@@ -20,10 +20,15 @@ class BangumiController extends AdminController
     protected function grid()
     {
         return Grid::make(new Bangumi(), function (Grid $grid) {
+            if (request()->get('_view_') !== 'list') {
+                $grid->view('admin.grid.bangumi');
+            }
+            $grid->model()->orderBy('begin', 'desc');
             $grid->disableRowSelector();
             $grid->disableCreateButton();
             $grid->disableDeleteButton();
-            $grid->column('title', '名称')->display(function () {
+            $grid->setActionClass(Grid\Displayers\Actions::class);
+            $grid->column('title', '番剧名')->display(function () {
                 return array_key_exists('zh-Hans', $this->titleTranslate) ? $this->titleTranslate['zh-Hans'][0] : $this->title;
             })->width(200);
             $grid->column('image')->display(function () {
@@ -59,6 +64,13 @@ class BangumiController extends AdminController
                         ]
                     ]);
                 })->integer()->width(3);
+            });
+            $grid->actions(function (Grid\Displayers\Actions $actions) {
+                //下载与订阅
+                $title = array_key_exists('zh-Hans', $actions->row->titleTranslate) ? $actions->row->titleTranslate['zh-Hans'][0] : $actions->row->title;
+                $actions->append('<a href="bangumi_subscribe/form?id=' . $actions->getKey() . '&title=' . $title . '"><i class="fa fa-cloud-download"></i></a>');
+                // prepend一个操作
+//                $actions->prepend('<a href=""><i class="fa fa-paper-plane"></i></a>');
             });
         });
     }

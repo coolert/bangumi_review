@@ -3,8 +3,6 @@
 namespace App\Http\Services;
 
 use App\Tools\GuzzleRequest;
-use GuzzleHttp\Client;
-use GuzzleHttp\Exception\RequestException;
 
 class VideoSourceService extends BaseService
 {
@@ -36,8 +34,10 @@ class VideoSourceService extends BaseService
     public const MIKAN_URL = [
         //搜索地址
         'search_url' => 'https://mikanani.me/Home/Search?searchstr={keywords}',
-        //RSS地址
-        'rss_url' => 'https://mikanani.me/RSS/Search?',
+        //RSS地址(关键词搜索)
+        'rss_search_url' => 'https://mikanani.me/RSS/Search?',
+        //Rss地址(番剧id搜索)
+        'rss_id_url' => 'https://mikanani.me/RSS/Bangumi?',
     ];
 
     /**
@@ -173,28 +173,62 @@ class VideoSourceService extends BaseService
      */
     public function mikan_rss_search(string $keywords = '', string $bangumi_id = '', string $group_id = ''): array
     {
-        $param_str = '';
         if (!empty($keywords)) {
-            $param_str .= 'searchstr=' . urlencode($keywords);
-        }
-        if (!empty($bangumi_id)) {
-            if (str_ends_with($param_str, '?')) {
-                $param_str .= 'bangumiId=' . $bangumi_id;
-            }else{
-                $param_str .= '&bangumiId=' . $bangumi_id;
+            $url = self::MIKAN_URL['rss_search_url'] . 'searchstr=' . urlencode($keywords);
+        }else{
+            $url = self::MIKAN_URL['rss_id_url'];
+            if (!empty($bangumi_id)) {
+                if (str_ends_with($url, '?')) {
+                    $url .= 'bangumiId=' . $bangumi_id;
+                }else{
+                    $url .= '&bangumiId=' . $bangumi_id;
+                }
+            }
+            if (!empty($group_id)) {
+                if (str_ends_with($url, '?')) {
+                    $url .= 'subgroupid=' . $group_id;
+                }else{
+                    $url .= '&subgroupid=' . $group_id;
 
+                }
             }
         }
-        if (!empty($group_id)) {
-            if (str_ends_with($param_str, '?')) {
-                $param_str .= 'subgroupid=' . $group_id;
-            }else{
-                $param_str .= '&subgroupid=' . $group_id;
-
-            }
+        $resource_list = $this->analysis_mikan_rss($url);
+        $resource_group = [];
+        foreach ($resource_list as $v) {
+            $group_name = $this->get_group_name($v['title']);
+            $resource_group[$group_name][] = $v;
         }
-        $url = self::MIKAN_URL['rss_url'] . $param_str;
-        return $this->analysis_mikan_rss($url);
+        return $resource_group;
+    }
+
+    /** 解析字幕组
+     * @param $title
+     * @return string
+     * @throws \Exception
+     * @author Lv
+     * @date 2024/8/8
+     */
+    public function get_group_name($title): string
+    {
+        $pos_one = mb_strpos($title, ']');
+        $pos_two = mb_strpos($title, '】');
+        $pos_three = mb_strpos($title, '字幕组');
+        if ($pos_one !== false && $pos_two !== false) {
+            $end_pos = min($pos_one - 1, $pos_two - 1);
+            return mb_substr($title, 1, $end_pos, 'utf-8');
+        } else if ($pos_one !== false) {
+            $end_pos = $pos_one - 1;
+            return mb_substr($title, 1, $end_pos, 'utf-8');
+        } else if ($pos_two !== false) {
+            $end_pos = $pos_two - 1;
+            return mb_substr($title, 1, $end_pos, 'utf-8');
+        } else if ($pos_three !== false) {
+            $end_pos = $pos_three;
+            return mb_substr($title, 0, $end_pos, 'utf-8');
+        } else {
+            throw new \Exception('字幕组名称解析失败');
+        }
     }
 
     /** moe标签搜索
